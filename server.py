@@ -24,6 +24,7 @@ class AccountServer:
                              }
         self.app = None
         self.load_accounts_from_file()
+        self.stats()
         self.launch_server()
 
     def launch_server(self):
@@ -134,10 +135,12 @@ class AccountServer:
         in_use_sql = "SELECT count(*) from accounts WHERE in_use_by IS NOT NULL"
         total_sql = "SELECT count(*) from accounts"
 
-        cd, in_use, total = Db.get_single_results(cd_sql, in_use_sql, total_sql)
-        available = total - in_use - cd
+        self.cd, self.in_use, self.total = Db.get_single_results(cd_sql, in_use_sql, total_sql)
+        self.available = self.total - self.in_use - self.cd
+        self.accs_per_device = round(self.total / self.in_use, 2)
 
-        return {"accounts": total, "in_use": in_use, "cooldown": cd, "available": available}
+        return {"accounts": self.total, "apd": self.accs_per_device, "in_use": self.in_use, "cooldown": self.cd,
+                "available": self.available}
 
 
 if __name__ == "__main__":
