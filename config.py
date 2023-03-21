@@ -25,6 +25,8 @@ class Config:
     rate_limit_number = general.getint("rate_limit_number", 3)
     strict_rate_limit_minutes = general.getint("strict_rate_limit_minutes", 5)
     strict_rate_limit_seconds = strict_rate_limit_minutes * 60
+    allow_rate_limit_override_when_burned = general.getboolean("allow_rate_limit_override_when_burned", True)
+
     args = parser.parse_args()
     if args.verbose:
         loglevel = logging.DEBUG
@@ -45,7 +47,8 @@ class Config:
                 or self.auth_password is None:
             logger.error("Missing required setting! Check your config.")
 
-    def get_cooldown_timestamp(self):
-        res = int(int(time.time()) - self.cooldown_seconds)
+    @classmethod
+    def get_cooldown_timestamp(cls):
+        res = int(int(time.time()) - cls.cooldown_seconds)
         logger.trace(f"calculated cooldown timestamp {res}")
         return res

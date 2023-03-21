@@ -80,3 +80,23 @@ class DbConnection:
                         c+=1
                     return ret
 
+    @classmethod
+    def is_account_cooled(cls, username):
+        sql = f"SELECT GREATEST(last_returned, last_burned) FROM accounts WHERE username = \"{username}\""
+        ts = cls.get(sql)
+        if not ts:
+            return None
+        elif ts < Config.get_cooldown_timestamp():
+            return True
+        return False
+
+    @classmethod
+    def is_account_burned(cls, username):
+        sql = f"SELECT last_burned FROM accounts WHERE username = \"{username}\""
+        ts = cls.get(sql)
+        if not ts:
+            return None
+        elif ts < Config.get_cooldown_timestamp():
+            # NOT burned -> is_account_burned? False!
+            return False
+        return True

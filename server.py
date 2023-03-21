@@ -173,7 +173,11 @@ class AccountServer:
 
         username = None
         pw = None
-        do_update_timestamps = True
+
+        # default select statement - can get overridden in the rate limit handler below
+        last_returned_limit = self.config.get_cooldown_timestamp()
+        select = ("SELECT username, password from accounts WHERE in_use_by is NULL AND "
+                  f"GREATEST(last_returned, last_burned) < {last_returned_limit} ORDER BY last_use ASC LIMIT 1;")
 
         rate_limit_state = self.is_rate_limited(device)
         # True if RateLimit is not 0 - that would be RateLimit.unlimited
@@ -181,23 +185,40 @@ class AccountServer:
         if rate_limit_state:
             device_logger.trace("rate-limited ... handle it")
             try:
-                previous_username = self.request_log[device][0]["username"]
+                # get the first not-burned account from the request log
+                c: int = 0
+                while c < Config.rate_limit_number:
+                    try:
+                        previous_username = self.request_log[device][c]["username"]
+                        if not Db.is_account_burned(previous_username):
+                            select = f"SELECT username, password from accounts where username = \"{previous_username}\""
+                            device_logger.info(f"Getting earliest queue account ({previous_username})")
+                            break
+                        else:
+                            device_logger.debug(f"account {previous_username} currently considered burned .. try next")
+                    except Exception as e:
+                        if c == 0:
+                            raise IndexError("No accounts in request log")
+                        continue
+                    finally:
+                        c += 1
+                else:
+                    # keep the default select statement because all accounts in the request log were burned
+                    if not Config.allow_rate_limit_override_when_burned:
+                        raise RuntimeError("Not allowed to override rate limit when all accounts are burned!")
+                    device_logger.warning("All accounts in request log have been marked as burned - allow to get "
+                                          "a fresh account despite rate-limit")
+                    rate_limit_state = RateLimit.unlimited
                 # rotating backwards by one item moves the first item to the end of the deque, so always the account not
                 # used the longest will be returned, without changing the timestamp used to evaluate the rate limit
                 # -> backward rotation is handled by RequestLog
                 self.request_log.rotate(device)
-                select = f"SELECT username, password from accounts where username = \"{previous_username}\""
-                device_logger.info(f"Getting earliest queue account ({previous_username})")
             except Exception as e:
-                # no username in the request_log - log exception because this should hardly be possible
                 select = f"SELECT username, password from accounts where in_use_by = \"{device}\""
-                device_logger.exception(f"Unable to get a previous account ({e})- getting its current account again")
+                device_logger.warning(f"Unable to get a previous account ({e})- getting its current account again")
                 username, pw = Db.get_elements_of_first_result(select, num=2)
         else:
             device_logger.trace(f"not rate-limited ... move on")
-            last_returned_limit = self.config.get_cooldown_timestamp()
-            select = ("SELECT username, password from accounts WHERE in_use_by is NULL AND last_returned < "
-                      f"{last_returned_limit} ORDER BY last_use ASC LIMIT 1;")
 
         if not username or not pw:
             username, pw = Db.get_elements_of_first_result(select, num=2)
@@ -276,7 +297,7 @@ class AccountServer:
     def stats(self):
         last_returned_limit = self.config.get_cooldown_timestamp()
 
-        cd_sql = f"SELECT count(*) from accounts WHERE last_returned >= {last_returned_limit}"
+        cd_sql = f"SELECT count(*) from accounts WHERE GREATEST(last_returned, last_burned) >= {last_returned_limit}"
         in_use_sql = "SELECT count(*) from accounts WHERE in_use_by IS NOT NULL"
         total_sql = "SELECT count(*) from accounts"
 
