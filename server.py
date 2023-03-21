@@ -223,6 +223,7 @@ class AccountServer:
             device_logger.trace(f"not rate-limited ... move on")
 
         if not username or not pw:
+            device_logger.trace(select)
             username, pw = Db.get_elements_of_first_result(select, num=2)
         if not username or not pw:
             device_logger.error(f"Unable to return an account")
