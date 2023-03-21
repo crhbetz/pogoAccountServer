@@ -60,7 +60,9 @@ class DbConnection:
             sql += " LIMIT 1"
         with cls() as conn:
             conn.cur.execute(sql)
+            results: int = 0
             for elem in conn.cur:
+                results += 1
                 if not num:
                     if len(elem) == 0:
                         return False
@@ -79,6 +81,17 @@ class DbConnection:
                             ret.append(False)
                         c+=1
                     return ret
+            if results == 0:
+                ret: list = []
+                if num and num > 1:
+                    c: int = 0
+                    while c < num:
+                        ret.append(False)
+                        c += 1
+                    return ret
+                else:
+                    return False
+
 
     @classmethod
     def is_account_cooled(cls, username):
