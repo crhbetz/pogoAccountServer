@@ -50,6 +50,10 @@ class DbConnection:
             conn.cur.execute(sql)
 
     @classmethod
+    def get(cls, sql):
+        return cls.get_elements_of_first_result(sql, num=1)
+
+    @classmethod
     def get_elements_of_first_result(cls, sql, num=None):
         if not "limit" in sql.lower():
             sql = sql.rstrip(";")

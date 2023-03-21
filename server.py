@@ -126,7 +126,7 @@ class AccountServer:
         for username in self.request_log.get_logged_usernames(device):
             latest_request += f" or username = \"{username}\""
         device_logger.trace(f"{latest_request=}")
-        latest = Db.get_elements_of_first_result(latest_request, num=1)
+        latest = Db.get(latest_request)
         print_string = humanize.precisedelta(int(int(time.time()) - latest)) if latest > 0 else "an eternity"
         device_logger.info(f"Latest allowed request was {print_string} ago")
         # the actual check against the configured rate limit interval
