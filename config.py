@@ -1,11 +1,16 @@
+import argparse
 import configparser
 import logging
 import time
+from loguru import logger
+
 
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-logger = logging.getLogger(__name__)
+parser = argparse.ArgumentParser(description='Pokemon GO PTC Account Server')
+parser.add_argument('-v', '--verbose', action='store_true')
+parser.add_argument('-vv', '--trace', action='store_true')
 
 
 class Config:
@@ -16,6 +21,17 @@ class Config:
     auth_password = general.get("auth_password", None)
     cooldown_hours = general.getint("cooldown", 24)
     cooldown_seconds = cooldown_hours * 60 * 60
+    rate_limit_minutes = general.getint("rate_limit_minutes", 60)
+    rate_limit_number = general.getint("rate_limit_number", 3)
+    strict_rate_limit_minutes = general.getint("strict_rate_limit_minutes", 5)
+    strict_rate_limit_seconds = strict_rate_limit_minutes * 60
+    args = parser.parse_args()
+    if args.verbose:
+        loglevel = logging.DEBUG
+    elif args.trace:
+        loglevel = logging.TRACE
+    else:
+        loglevel = logging.INFO
 
     database = config["database"]
     db_host = database.get("host", "127.0.0.1")
@@ -31,5 +47,5 @@ class Config:
 
     def get_cooldown_timestamp(self):
         res = int(int(time.time()) - self.cooldown_seconds)
-        logger.debug(f"calculated cooldown timestamp {res}")
+        logger.trace(f"calculated cooldown timestamp {res}")
         return res

@@ -5,3 +5,4 @@ __pycache__
 testing/scripts
 config.ini
 protos
+*.pickle

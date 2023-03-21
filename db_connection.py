@@ -43,3 +43,36 @@ class DbConnection:
                 # https://stackoverflow.com/a/68186597
                 res.append(next(conn.cur, [None])[0])
         return res
+
+    @classmethod
+    def execute(cls, sql):
+        with cls() as conn:
+            conn.cur.execute(sql)
+
+    @classmethod
+    def get_elements_of_first_result(cls, sql, num=None):
+        if not "limit" in sql.lower():
+            sql = sql.rstrip(";")
+            sql += " LIMIT 1"
+        with cls() as conn:
+            conn.cur.execute(sql)
+            for elem in conn.cur:
+                if not num:
+                    if len(elem) == 0:
+                        return False
+                    elif len(elem) == 1:
+                        return elem[0]
+                    return [e for e in elem]
+                else:
+                    if num == 1:
+                        return elem[0] if elem[0] else False
+                    c: int = 0
+                    ret: list = []
+                    while c < num:
+                        try:
+                            ret.append(elem[c])
+                        except Exception as e:
+                            ret.append(False)
+                        c+=1
+                    return ret
+
