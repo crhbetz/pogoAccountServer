@@ -60,6 +60,14 @@ class AccountServer:
                               self.set_level_by_device, methods=['GET', 'POST'])
         self.app.add_url_rule("/set/level/by-account/<account>/<level>", "set_level_by_account",
                               self.set_level_by_account, methods=['GET', 'POST'])
+        self.app.add_url_rule("/set/burned/by-device/<device>", "set_burned_by_device",
+                              self.set_burned_by_device, methods=['GET', 'POST'])
+        self.app.add_url_rule("/set/burned/by-device/<device>/<ts>", "set_burned_by_device",
+                              self.set_burned_by_device, methods=['GET', 'POST'])
+        self.app.add_url_rule("/set/burned/by-account/<account>", "set_burned_by_account",
+                              self.set_burned_by_account, methods=['GET', 'POST'])
+        self.app.add_url_rule("/set/burned/by-account/<account>/<ts>", "set_burned_by_account",
+                              self.set_burned_by_account, methods=['GET', 'POST'])
         self.app.add_url_rule("/stats", "stats", self.stats, methods=['GET'])
 
         werkzeug_logger = logging.getLogger("werkzeug")
@@ -244,6 +252,25 @@ class AccountServer:
         username = Db.get(sql)
         if username:
             return self.set_level_by_account(account=username, level=level)
+        return self.invalid_request()
+
+    def set_burned_by_account(self, account=None, ts=int(time.time())):
+        logger.info(f"Set burned by account: {account=} at {ts=}")
+        if not (account and ts) or not can_be_type(ts, int):
+            return self.invalid_request()
+        sql = f"UPDATE accounts SET last_burned = {int(ts)} WHERE username = \"{account}\""
+        Db.execute(sql)
+        return self.resp_ok()
+
+    def set_burned_by_device(self, device=None, ts=int(time.time())):
+        # find the assigned account, then return self.set_burned_by_account
+        logger.info(f"Set burned by device: {device=} at {ts=}")
+        if not (device and ts) or not can_be_type(ts, int):
+            return self.invalid_request()
+        sql = f"SELECT username FROM accounts WHERE in_use_by = \"{device}\""
+        username = Db.get(sql)
+        if username:
+            return self.set_burned_by_account(account=username, ts=ts)
         return self.invalid_request()
 
     def stats(self):

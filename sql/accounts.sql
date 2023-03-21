@@ -6,4 +6,5 @@ create table accounts (
     in_use_by text,
     last_returned bigint default 0,
     level tinyint default 0,
+    last_burned bigint default 0,
     primary key (username))
