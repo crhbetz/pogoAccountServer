@@ -15,6 +15,7 @@ from config import Config
 from db_connection import DbConnection as Db
 from logs import setup_logger
 from request_log import RequestLog
+from utils import can_be_type
 
 
 setup_logger()
@@ -55,6 +56,10 @@ class AccountServer:
         self.app.add_url_rule('/<first>/<path:rest>', "fallback", self.fallback, methods=['GET', 'POST'])
 
         self.app.add_url_rule("/get/<device>", "get_account", self.get_account, methods=['GET', 'POST'])
+        self.app.add_url_rule("/set/level/by-device/<device>/<level>", "set_level_by_device",
+                              self.set_level_by_device, methods=['GET', 'POST'])
+        self.app.add_url_rule("/set/level/by-account/<account>/<level>", "set_level_by_account",
+                              self.set_level_by_account, methods=['GET', 'POST'])
         self.app.add_url_rule("/stats", "stats", self.stats, methods=['GET'])
 
         werkzeug_logger = logging.getLogger("werkzeug")
@@ -221,6 +226,25 @@ class AccountServer:
         # newline for visual separation of requests ...
         print()
         return self.resp_ok({"username": username, "password": pw})
+
+    def set_level_by_account(self, account=None, level=None):
+        logger.info(f"Set level by account: {account=} to {level=}")
+        if not (level and account) or not can_be_type(level, int):
+            return self.invalid_request()
+        sql = f"UPDATE accounts SET level = {int(level)} WHERE username = \"{account}\""
+        Db.execute(sql)
+        return self.resp_ok()
+
+    def set_level_by_device(self, device=None, level=None):
+        # find the assigned account, then return self.set_level_by_account
+        logger.info(f"Set level by device: {device=} to {level=}")
+        if not (device and level) or not can_be_type(level, int):
+            return self.invalid_request()
+        sql = f"SELECT username FROM accounts WHERE in_use_by = \"{device}\""
+        username = Db.get(sql)
+        if username:
+            return self.set_level_by_account(account=username, level=level)
+        return self.invalid_request()
 
     def stats(self):
         last_returned_limit = self.config.get_cooldown_timestamp()
