@@ -113,3 +113,13 @@ class DbConnection:
             # NOT burned -> is_account_burned? False!
             return False
         return True
+
+    @classmethod
+    def is_account_at_level(cls, username, level):
+        sql = f"SELECT level FROM accounts WHERE username = \"{username}\""
+        acc_level = int(cls.get(sql))
+        if not acc_level:
+            return None
+        elif acc_level < int(level):
+            return False
+        return True

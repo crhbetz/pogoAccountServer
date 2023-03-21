@@ -56,6 +56,7 @@ class AccountServer:
         self.app.add_url_rule('/<first>/<path:rest>', "fallback", self.fallback, methods=['GET', 'POST'])
 
         self.app.add_url_rule("/get/<device>", "get_account", self.get_account, methods=['GET', 'POST'])
+        self.app.add_url_rule("/get/<device>/<level>", "get_account_level", self.get_account, methods=['GET', 'POST'])
         self.app.add_url_rule("/set/level/by-device/<device>/<level>", "set_level_by_device",
                               self.set_level_by_device, methods=['GET', 'POST'])
         self.app.add_url_rule("/set/level/by-account/<account>/<level>", "set_level_by_account",
@@ -166,9 +167,9 @@ class AccountServer:
             device_logger.trace(f"NOT rate-limited! {limiting_requests=} < {self.config.rate_limit_number}")
             return RateLimit.unlimited
 
-    def get_account(self, device=None):
+    def get_account(self, device=None, level=30):
         device_logger = logger.bind(name=device)
-        if not device:
+        if not device or not can_be_type(level, int):
             return self.invalid_request()
 
         username = None
@@ -176,7 +177,7 @@ class AccountServer:
 
         # default select statement - can get overridden in the rate limit handler below
         last_returned_limit = self.config.get_cooldown_timestamp()
-        select = ("SELECT username, password from accounts WHERE in_use_by is NULL AND "
+        select = (f"SELECT username, password from accounts WHERE in_use_by is NULL AND level >= {int(level)} AND "
                   f"GREATEST(last_returned, last_burned) < {last_returned_limit} ORDER BY last_use ASC LIMIT 1;")
 
         rate_limit_state = self.is_rate_limited(device)
@@ -185,17 +186,18 @@ class AccountServer:
         if rate_limit_state:
             device_logger.trace("rate-limited ... handle it")
             try:
-                # get the first not-burned account from the request log
+                # get the first not-burned account with suitable level from the request log
                 c: int = 0
                 while c < Config.rate_limit_number:
                     try:
                         previous_username = self.request_log[device][c]["username"]
-                        if not Db.is_account_burned(previous_username):
+                        if (not Db.is_account_burned(previous_username) and
+                                Db.is_account_at_level(previous_username, level)):
                             select = f"SELECT username, password from accounts where username = \"{previous_username}\""
                             device_logger.info(f"Getting earliest queue account ({previous_username})")
                             break
                         else:
-                            device_logger.debug(f"account {previous_username} currently considered burned .. try next")
+                            device_logger.debug(f"account {previous_username} unusable .. try next")
                     except Exception as e:
                         if c == 0:
                             raise IndexError("No accounts in request log")
