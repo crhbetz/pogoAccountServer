@@ -55,6 +55,8 @@ class AccountServer:
         self.app.add_url_rule('/<first>', "fallback", self.fallback, methods=['GET', 'POST'])
         self.app.add_url_rule('/<first>/<path:rest>', "fallback", self.fallback, methods=['GET', 'POST'])
 
+        self.app.add_url_rule("/get-current/<device>", "get_current_account", self.get_current_account,
+                              methods=['GET', 'POST'])
         self.app.add_url_rule("/get/<device>", "get_account", self.get_account, methods=['GET', 'POST'])
         self.app.add_url_rule("/get/<device>/<level>", "get_account_level", self.get_account, methods=['GET', 'POST'])
         self.app.add_url_rule("/set/level/by-device/<device>/<level>", "set_level_by_device",
@@ -297,6 +299,18 @@ class AccountServer:
         if username:
             return self.set_burned_by_account(account=username, ts=ts)
         return self.invalid_request()
+
+    def get_current_account(self, device=None):
+        device_logger = logger.bind(name=device)
+        device_logger.info("Get current account")
+        if not device:
+            return self.invalid_request()
+        sql = f"SELECT username FROM accounts WHERE in_use_by = \"{device}\""
+        username = Db.get(sql)
+        if username:
+            data = {"username": username}
+            device_logger.info(f"Return current account: {data}")
+            return self.resp_ok(data)
 
     def stats(self):
         last_returned_limit = self.config.get_cooldown_timestamp()
