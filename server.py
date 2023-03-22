@@ -272,7 +272,8 @@ class AccountServer:
 
     def set_level_by_device(self, device=None, level=None):
         # find the assigned account, then return self.set_level_by_account
-        logger.info(f"Set level by device: {device=} to {level=}")
+        device_logger = logger.bind(name=device)
+        device_logger.info(f"Set level by device to {level=}")
         if not (device and level) or not can_be_type(level, int):
             return self.invalid_request()
         sql = f"SELECT username FROM accounts WHERE in_use_by = \"{device}\""
@@ -291,7 +292,8 @@ class AccountServer:
 
     def set_burned_by_device(self, device=None, ts=int(time.time())):
         # find the assigned account, then return self.set_burned_by_account
-        logger.info(f"Set burned by device: {device=} at {ts=}")
+        device_logger = logger.bind(name=device)
+        device_logger.info(f"Set burned by device at {ts=}")
         if not (device and ts) or not can_be_type(ts, int):
             return self.invalid_request()
         sql = f"SELECT username FROM accounts WHERE in_use_by = \"{device}\""
