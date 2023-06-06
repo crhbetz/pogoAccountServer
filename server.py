@@ -180,8 +180,7 @@ class AccountServer:
         # default select statement - can get overridden in the rate limit handler below
         last_returned_limit = self.config.get_cooldown_timestamp()
         select = (f"SELECT username, password from accounts WHERE in_use_by is NULL AND level >= {int(level)} AND "
-                  f"GREATEST(last_returned, last_burned) < {last_returned_limit} ORDER BY level ASC, last_use ASC "
-                  "LIMIT 1;")
+                  f"GREATEST(last_returned, last_burned) < {last_returned_limit} ORDER BY last_use ASC LIMIT 1;")
 
         rate_limit_state = self.is_rate_limited(device)
         # True if RateLimit is not 0 - that would be RateLimit.unlimited
