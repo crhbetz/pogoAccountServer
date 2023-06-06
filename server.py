@@ -336,9 +336,15 @@ class AccountServer:
 
         self.cd, self.in_use, self.total = Db.get_single_results(cd_sql, in_use_sql, total_sql)
         self.available = self.total - self.in_use - self.cd
-        self.accs_per_device = round(self.total / self.in_use, 2)
-        self.required_per_device = round((self.in_use + self.cd) / self.in_use, 2)
-        self.hours_per_account = round(24 / self.required_per_device, 2)
+        try:
+            self.accs_per_device = round(self.total / self.in_use, 2)
+            self.required_per_device = round((self.in_use + self.cd) / self.in_use, 2)
+            self.hours_per_account = round(24 / self.required_per_device, 2)
+        except ZeroDivisionError:
+            logger.warning("Encountered ZeroDivisionError trying to calculate stats ... return zeroes")
+            self.accs_per_device = 0
+            self.required_per_device = 0
+            self.hours_per_account = 0
 
         return {"accounts": self.total, "accounts_per_device": self.accs_per_device,
                 "required_per_device": self.required_per_device, "hours_per_account": self.hours_per_account,
