@@ -4,12 +4,12 @@ Serve PTC accounts for Pokemon Go things - created to be used with the [mp-accou
 
 # Setup
 
-As I'm very short on time right now, I can't provide a proper guide. The server should run in your regular MAD python environment.
+As I'm very short on time right now, I can't provide a proper guide. This is all you'll get:
 
 * create a new MySQL database to use
-* apply `sql/accounts.sql` to the new database
+* apply `sql/accounts.sql` **followed by updates in numerical order** to the new database - **future updates have to be applied manually!!**
 * `cp config.ini.example config.ini` and customize `config.ini` with your data
-* install requirements `pip install -r requirements.txt` into a python environment of your choice
+* install requirements `pip install -r requirements.txt` into a python environment of your choice (MAD or separate)
 * create a file `accounts.txt` that contains your PTC accounts, one per line, in the format `username,password`
 * run `server.py` with your suitable `python` binary, for example `python server.py`
 * setup the [mp-accountServerConnector](https://github.com/crhbetz/mp-accountServerConnector) MAD plugin for MAD to pull PTC accounts from this server
