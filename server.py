@@ -314,7 +314,21 @@ class AccountServer:
             device_logger.info(f"Return current account: {data}")
             return self.resp_ok(data)
 
+    def force_release(self):
+        sql = (f"UPDATE accounts SET in_use_by = NULL, last_returned = '{int(time.time())}' WHERE "
+               f"in_use_by IS NOT NULL AND last_returned < {int(time.time()) - self.config.force_release_seconds}")
+        sql_log = (f"SELECT * FROM accounts WHERE in_use_by IS NOT NULL AND last_returned < "
+                   f"{int(time.time()) - self.config.force_release_seconds} ORDER BY last_returned DESC")
+        with Db() as conn:
+            conn.cur.execute(sql_log)
+            for res in conn.cur:
+                logger.info(f"Force release this account after {int(self.config.force_release_seconds / 60 / 60 / 24)}"
+                            f" days: {res}")
+        Db.execute(sql)
+        return True
+
     def stats(self):
+        self.force_release()
         last_returned_limit = self.config.get_cooldown_timestamp()
 
         cd_sql = f"SELECT count(*) from accounts WHERE GREATEST(last_returned, last_burned) >= {last_returned_limit}"

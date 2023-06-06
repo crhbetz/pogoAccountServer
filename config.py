@@ -26,6 +26,7 @@ class Config:
     strict_rate_limit_minutes = general.getint("strict_rate_limit_minutes", 5)
     strict_rate_limit_seconds = strict_rate_limit_minutes * 60
     allow_rate_limit_override_when_burned = general.getboolean("allow_rate_limit_override_when_burned", True)
+    force_release_seconds = general.getint("force_release_days", 30) * 60 * 60 * 24
 
     args = parser.parse_args()
     if args.verbose:

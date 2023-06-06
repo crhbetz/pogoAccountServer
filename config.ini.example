@@ -3,6 +3,7 @@ listen_host = 127.0.0.1
 listen_port = 9008
 auth_username = authuser
 auth_password = authpw
+force_release_days = 30
 
 [database]
 host = 127.0.0.1
